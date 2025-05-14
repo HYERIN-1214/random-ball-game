@@ -1,47 +1,81 @@
-let players = [];
-const colors = ["#ff5733", "#33c4ff", "#33ff77", "#ff33a6", "#ffc733", "#b633ff", "#33ffba", "#ff3362"];
+const names = ['Alice', 'Bob', 'Charlie'];
+let positions = Array(names.length).fill(0);
+let speeds = Array(names.length).fill(0);
+let obstacles = [];
+let winner = null;
+let isRunning = false;
 
-function addPlayer() {
-    const name = document.getElementById("nameInput").value;
-    if (name.trim() !== "") {
-        players.push(name);
-        document.getElementById("nameInput").value = "";
-        alert(`팀원 "${name}" 추가 완료!`);
+function generateObstacles() {
+    const obs = [];
+    for (let i = 0; i < 15; i++) {
+        obs.push({
+            left: Math.random() * 90 + '%',
+            delay: Math.random() * 15,
+            size: Math.random() * 40 + 20,
+            speed: Math.random() * 3 + 2,
+        });
     }
+    return obs;
 }
 
 function startRace() {
-    if (players.length === 0) {
-        alert("팀원을 추가해주세요!");
+    positions = Array(names.length).fill(0);
+    speeds = Array(names.length).fill(2 + Math.random() * 3);
+    obstacles = generateObstacles();
+    isRunning = true;
+    updateRace();
+}
+
+function updateRace() {
+    if (!isRunning) return;
+
+    positions = positions.map((pos, index) => {
+        const speedChange = Math.random() > 0.7 ? (Math.random() * 2 - 1) : 0;
+        return Math.min(pos + speeds[index] + speedChange, 100);
+    });
+
+    const winnerIndex = positions.findIndex(pos => pos >= 100);
+    if (winnerIndex !== -1) {
+        isRunning = false;
+        winner = names[winnerIndex];
+        alert(`🏆 ${winner}가 우승했습니다!`);
         return;
     }
 
-    const track = document.getElementById("race-track");
-    track.innerHTML = "";
-    const finishLine = track.offsetHeight - 60;
+    render();
+    requestAnimationFrame(updateRace);
+}
 
-    players.forEach((player, index) => {
-        const ball = document.createElement("div");
-        ball.className = "ball";
-        ball.textContent = player;
-        ball.style.backgroundColor = colors[index % colors.length];
-        ball.style.left = `${index * 60 + 20}px`;
+function render() {
+    const track = document.querySelector('.race-track');
+    track.innerHTML = '';
+
+    names.forEach((name, index) => {
+        const ball = document.createElement('div');
+        ball.className = 'ball';
+        ball.style.top = `${positions[index]}%`;
+        ball.style.left = `${(index + 1) * (90 / (names.length + 1))}%`;
+        ball.textContent = name;
         track.appendChild(ball);
+    });
 
-        let position = 0;
-        const speed = Math.random() * 3 + 2;
-        const interval = setInterval(() => {
-            position += speed;
-            ball.style.top = `${position}px`;
-            if (position >= finishLine) {
-                clearInterval(interval);
-                announceWinner(player);
-            }
-        }, 30);
+    obstacles.forEach(obstacle => {
+        const obs = document.createElement('div');
+        obs.className = 'obstacle';
+        obs.style.width = `${obstacle.size}px`;
+        obs.style.height = `${obstacle.size}px`;
+        obs.style.left = obstacle.left;
+        obs.style.top = `-${obstacle.size}px`;
+        track.appendChild(obs);
     });
 }
 
-function announceWinner(player) {
-    const winnerElement = document.getElementById("winner");
-    winnerElement.textContent = `🎉 우승자: ${player}! 🎉`;
-}
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.getElementById('root');
+    root.innerHTML = `
+        <h1>🚀 우주 공 레이스</h1>
+        <ul>${names.map(name => `<li>${name}</li>`).join('')}</ul>
+        <button onclick="startRace()">Start Race</button>
+        <div class="race-track"></div>
+    `;
+});
