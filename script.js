@@ -1,93 +1,108 @@
+const app = document.getElementById("root");
+
+app.innerHTML = `
+    <h1>🚀 오늘의 커피는?</h1>
+    <div class="container">
+        <input type="text" id="nameInput" placeholder="팀원 이름 입력" />
+        <button onclick="addName()">Add</button>
+        <ul id="nameList"></ul>
+        <button onclick="startRace()">Start Race</button>
+        <div class="race-track" id="track"></div>
+        <div id="winner" style="display: none; font-size: 2em; margin-top: 20px;"></div>
+    </div>
+`;
+
 let names = [];
-let balls = [];
+let positions = [];
+let speeds = [];
 let obstacles = [];
-let isRunning = false;
 
 function addName() {
-    const nameInput = document.getElementById('name');
+    const nameInput = document.getElementById("nameInput");
     const name = nameInput.value.trim();
-    if (name && !names.includes(name)) {
+    if (name) {
         names.push(name);
-        const nameList = document.getElementById('name-list');
-        const li = document.createElement('li');
-        li.textContent = name;
-        nameList.appendChild(li);
-        nameInput.value = '';
+        const listItem = document.createElement("li");
+        listItem.textContent = name;
+        document.getElementById("nameList").appendChild(listItem);
+        nameInput.value = "";
     }
 }
 
 function startRace() {
-    if (names.length < 2) {
-        alert("두 명 이상의 이름을 입력해주세요!");
-        return;
-    }
-
-    document.getElementById('start-button').disabled = true;
-    document.getElementById('name-input').style.display = 'none';
-    document.getElementById('name-list').style.display = 'none';
-
-    const track = document.getElementById('race-track');
-    track.innerHTML = '';
+    const track = document.getElementById("track");
+    track.innerHTML = "";
+    positions = Array(names.length).fill(0);
+    speeds = Array(names.length).map(() => 2 + Math.random() * 3);
+    obstacles = generateObstacles();
 
     names.forEach((name, index) => {
-        const ball = document.createElement('div');
-        ball.className = 'ball';
+        const ball = document.createElement("div");
+        ball.className = "ball";
         ball.textContent = name;
         ball.style.left = `${(index + 1) * (90 / (names.length + 1))}%`;
-        ball.style.top = '0px';
+        ball.style.top = "0%";
         track.appendChild(ball);
-        balls.push({ element: ball, position: 0, speed: Math.random() * 2 + 2 });
     });
 
-    generateObstacles();
-    isRunning = true;
-    requestAnimationFrame(updateRace);
+    obstacles.forEach((obstacle) => {
+        const obs = document.createElement("div");
+        obs.className = "obstacle";
+        obs.style.width = `${obstacle.size}px`;
+        obs.style.height = `${obstacle.size}px`;
+        obs.style.left = obstacle.left;
+        obs.style.top = "-100px";
+        track.appendChild(obs);
+        moveObstacle(obs, obstacle.speed);
+    });
+
+    requestAnimationFrame(updatePositions);
 }
 
 function generateObstacles() {
-    const track = document.getElementById('race-track');
-    for (let i = 0; i < 10; i++) {
-        const obstacle = document.createElement('div');
-        obstacle.className = 'obstacle';
-        const size = Math.random() * 40 + 20;
-        obstacle.style.width = `${size}px`;
-        obstacle.style.height = `${size}px`;
-        obstacle.style.left = `${Math.random() * 90}%`;
-        obstacle.style.top = `${Math.random() * 400}px`;
-        track.appendChild(obstacle);
-        obstacles.push({ element: obstacle, size, speed: Math.random() * 2 + 1 });
+    const obs = [];
+    for (let i = 0; i < 15; i++) {
+        obs.push({
+            left: Math.random() * 100 + "%",
+            size: Math.random() * 40 + 20,
+            speed: Math.random() * 3 + 2,
+        });
+    }
+    return obs;
+}
+
+function moveObstacle(obs, speed) {
+    let pos = -100;
+    function animate() {
+        pos += speed;
+        obs.style.top = `${pos}px`;
+        if (pos < window.innerHeight) {
+            requestAnimationFrame(animate);
+        }
+    }
+    animate();
+}
+
+function updatePositions() {
+    const track = document.getElementById("track");
+    const balls = track.getElementsByClassName("ball");
+
+    Array.from(balls).forEach((ball, index) => {
+        positions[index] += speeds[index];
+        ball.style.top = `${positions[index]}px`;
+
+        if (positions[index] > track.clientHeight - 50) {
+            declareWinner(names[index]);
+        }
+    });
+
+    if (!document.getElementById("winner").textContent) {
+        requestAnimationFrame(updatePositions);
     }
 }
 
-function updateRace() {
-    if (!isRunning) return;
-
-    balls.forEach(ball => {
-        let speedBoost = Math.random() * 2 - 1;
-        ball.position += ball.speed + speedBoost;
-        if (ball.position >= 450) {
-            declareWinner(ball.element.textContent);
-            isRunning = false;
-        }
-        ball.element.style.top = `${ball.position}px`;
-    });
-
-    obstacles.forEach(obstacle => {
-        obstacle.element.style.top = `${parseFloat(obstacle.element.style.top) + obstacle.speed}px`;
-        if (parseFloat(obstacle.element.style.top) > 500) {
-            obstacle.element.style.top = '-50px';
-            obstacle.element.style.left = `${Math.random() * 90}%`;
-        }
-    });
-
-    if (isRunning) {
-        requestAnimationFrame(updateRace);
-    }
+function declareWinner(winner) {
+    const winnerDiv = document.getElementById("winner");
+    winnerDiv.textContent = `🏆 ${winner}가 커피 당첨!`;
+    winnerDiv.style.display = "block";
 }
-
-function declareWinner(name) {
-    const winnerDiv = document.getElementById('winner');
-    winnerDiv.textContent = `🎉 오늘의 커피는 ${name}!`;
-    winnerDiv.classList.remove('hidden');
-}
-
